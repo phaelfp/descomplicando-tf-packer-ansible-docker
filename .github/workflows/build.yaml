@@ -1,0 +1,45 @@
+name: Build AMI with Packer
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout do repositório
+        uses: actions/checkout@v4
+
+      - name: Instalar o Packer
+        uses: hashicorp/setup-packer@v2
+        with:
+          version: latest
+
+      - name: Configurar credenciais AWS
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: "us-east-1"
+        run: |
+          echo "Configuração da AWS definida"
+
+      - name: Validar arquivos do Packer
+        run: packer validate .
+
+      - name: Criar AMI com Packer
+        run: |
+          AMI_ID=$(packer build -machine-readable . | tee output.log | grep 'artifact,0,id' | cut -d, -f6)
+          echo "AMI_ID=${AMI_ID}" >> $GITHUB_ENV
+          echo "AMI criada: ${AMI_ID}"
+
+      - name: Salvar AMI ID como artefato
+        uses: actions/upload-artifact@v4
+        with:
+          name: ami-id
+          path: ami-id.txt
+
+      - name: Registrar saída da AMI
+        run: echo $AMI_ID > ami-id.txt
