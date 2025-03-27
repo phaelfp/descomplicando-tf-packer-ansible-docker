@@ -36,7 +36,10 @@ jobs:
         run: packer validate .
 
       - name: Criar AMI com Packer
-        run: packer build . | tee output.log
+        run: |
+          set -e  # Garante que qualquer erro pare a execução
+          packer build . | tee output.log
+          exit ${PIPESTATUS[0]}  # Captura o código de saída do packer build
 
       - name: Capturar ID da AMI Criada
         run: |
