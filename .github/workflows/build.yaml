@@ -18,10 +18,8 @@ jobs:
         with:
           version: latest
 
-      - name: Instalar Plugins do Packer
-        run: |
-          packer plugins install github.com/hashicorp/amazon
-          packer plugins install github.com/hashicorp/ansible
+      - name: Run `packer init`
+        run: "packer init ."
 
       - name: Configurar credenciais AWS
         env:
@@ -35,9 +33,13 @@ jobs:
         run: packer validate .
 
       - name: Criar AMI com Packer
+        run: packer build . | tee output.log
+
+      - name: Capturar ID da AMI Criada
         run: |
-          AMI_ID=$(packer build -machine-readable . | tee output.log | grep 'artifact,0,id' | cut -d, -f6)
+          AMI_ID=$(grep 'artifact,0,id' output.log | cut -d, -f6)
           echo "AMI_ID=${AMI_ID}" >> $GITHUB_ENV
+          echo $AMI_ID > ami-id.txt
           echo "AMI criada: ${AMI_ID}"
 
       - name: Salvar AMI ID como artefato
@@ -45,6 +47,3 @@ jobs:
         with:
           name: ami-id
           path: ami-id.txt
-
-      - name: Registrar saída da AMI
-        run: echo $AMI_ID > ami-id.txt
